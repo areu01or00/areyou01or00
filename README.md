@@ -46,21 +46,28 @@ This CLI tool allows users to analyze stocks, manage watchlists, set alerts, and
 3. Inconsistent handling of user inputs
 4. Lack of robust error management
 
-## Installation
+## Installation steps
 
-[Instructions for installation will go here]
+1. Install Python
+2. Create a virtual Environment
+3. Install dependancies
+4. Run
 
 ## Usage
 
-[Basic usage instructions will go here]
+![image](https://github.com/user-attachments/assets/cec29e93-c480-4216-bc30-a0cd4f34af76)
+
+![image](https://github.com/user-attachments/assets/c02cfaf2-d17e-42ec-a985-d5eba07ab9bc)
+
+
 
 ## Contributing
 
-This project is currently under development. Contributions, especially in the areas of data parsing, error handling, and API interaction, are welcome.
+This project is currently under development. Contributions, especially in the areas of data parsing, error handling, and API interaction, are welcome. You can reach out to me on @IndianStreetBets Discord.
 
 ## License
 
-[License information will go here]
+LOL IDK MAN
 
 ## Disclaimer
 
