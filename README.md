@@ -22,53 +22,21 @@ This CLI tool allows users to analyze stocks, manage watchlists, set alerts, and
 - Stock Screener
 - Account Information
 
-## Current Status
+## Current Issues 
 
-### Working Features
+- Improve response time
+  
+## Usage 
 
-- Basic stock analysis (fetching and displaying data)
-- Account information retrieval
-- Market overview (partial functionality)
-- Watchlist addition and display
+This tool is intended for the use of developers and algo traders however end users can still use the features as per usage guide.
 
-### Features Needing Improvement
+## Next steps
 
-- Alerts system
-- Stock screener
-- Watchlist removal
-- Flexible timeframe handling
-- Error handling across functions
+- Introduce order placement and order management. 
+- Improve current features.
+- Remove dependancy of websocket from Zerodha and only use Zerodha websocket for order management.
+- Introduce a global scraper to get real-time updates regarding News, Inside buys, Volume spikes, corporate announcements, other events.
 
-## Main Issues
+## Collaboration
 
-1. Indicator parsing in screener and alerts
-2. Data retrieval for specific stocks
-3. Inconsistent handling of user inputs
-4. Lack of robust error management
-
-## Installation steps
-
-1. Install Python
-2. Create a virtual Environment
-3. Install dependancies
-4. Run
-
-## Usage
-
-![image](https://github.com/user-attachments/assets/cec29e93-c480-4216-bc30-a0cd4f34af76)
-
-![image](https://github.com/user-attachments/assets/c02cfaf2-d17e-42ec-a985-d5eba07ab9bc)
-
-
-
-## Contributing
-
-This project is currently under development. Contributions, especially in the areas of data parsing, error handling, and API interaction, are welcome. You can reach out to me on @IndianStreetBets Discord.
-
-## License
-
-LOL IDK MAN
-
-## Disclaimer
-
-This tool is for educational purposes only. Always verify data and consult financial advisors before making investment decisions.
+As this is a collaborative effort, algo traders and devs, i request you to provide feedback to improve this further. You can reach out to me on IndianStreetBets Discord server. 
