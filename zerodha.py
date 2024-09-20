@@ -59,7 +59,7 @@ class Indicator:
     def OBV(close: pd.Series, volume: pd.Series) -> pd.Series:
         return (np.sign(close.diff()) * volume).cumsum()
 
-class DataCache:
+class EnhancedCache:
     def __init__(self, expiry=300):
         self.cache = {}
         self.expiry = expiry
@@ -80,7 +80,7 @@ class FUZCLI:
     def __init__(self, kite):
         self.kite = kite
         self.watchlist_items = []
-        self.cache = DataCache()
+        self.cache = EnhancedCache()
         self.indices = {
             "NIFTY 50": "NIFTY 50",
             "NIFTY BANK": "NIFTY BANK",
@@ -115,7 +115,7 @@ class FUZCLI:
 
     def get_sector_stocks(self):
         return {
-            "NIFTY50": set([
+            "NIFTY50": [
                 "RELIANCE", "TCS", "HDFC", "INFY", "ICICIBANK", "HDFCBANK", "ITC", "KOTAKBANK",
                 "HINDUNILVR", "LT", "SBIN", "BHARTIARTL", "BAJFINANCE", "ASIANPAINT", "MARUTI",
                 "HCLTECH", "AXISBANK", "WIPRO", "NESTLEIND", "ULTRACEMCO", "SUNPHARMA", "TITAN",
@@ -123,8 +123,35 @@ class FUZCLI:
                 "JSWSTEEL", "ADANIPORTS", "GRASIM", "BAJAJ-AUTO", "DRREDDY", "TATACONSUM", "COALINDIA",
                 "BRITANNIA", "HINDALCO", "TATASTEEL", "SBILIFE", "UPL", "IOC", "EICHERMOT", "CIPLA",
                 "TATAMOTORS", "BPCL", "INDUSINDBK", "HEROMOTOCO", "SHREECEM"
-            ]),
-            # ... (other sectors)
+            ],
+            "BANK": [
+                "HDFCBANK", "ICICIBANK", "KOTAKBANK", "AXISBANK", "SBIN", "INDUSINDBK", "BANDHANBNK",
+                "FEDERALBNK", "IDFCFIRSTB", "PNB", "RBLBANK", "BANKBARODA", "AUBANK", "BANKINDIA"
+            ],
+            "IT": [
+                "TCS", "INFY", "HCLTECH", "WIPRO", "TECHM", "LTTS", "MINDTREE", "MPHASIS", "COFORGE",
+                "PERSISTENT", "OFSS", "LTIM", "NAUKRI"
+            ],
+            "PHARMA": [
+                "SUNPHARMA", "DRREDDY", "DIVISLAB", "CIPLA", "BIOCON", "AUROPHARMA", "LUPIN", "ALKEM",
+                "TORNTPHARM", "APOLLOHOSP", "GLAND", "IPCALAB", "NATCOPHARM", "SYNGENE"
+            ],
+            "AUTO": [
+                "MARUTI", "M&M", "TATAMOTORS", "BAJAJ-AUTO", "EICHERMOT", "HEROMOTOCO", "BALKRISIND",
+                "BOSCHLTD", "MOTHERSON", "TVSMOTOR", "ASHOKLEY", "BHARATFORG", "EXIDEIND", "SONACOMS"
+            ],
+            "FMCG": [
+                "HINDUNILVR", "ITC", "NESTLEIND", "BRITANNIA", "DABUR", "MARICO", "COLPAL", "GODREJCP",
+                "VBL", "TATACONSUM", "UBL", "MCDOWELL-N", "EMAMILTD", "PGHH"
+            ],
+            "METAL": [
+                "TATASTEEL", "HINDALCO", "JSWSTEEL", "ADANIENT", "COAL", "VEDL", "JINDALSTEL",
+                "APLAPOLLO", "HINDZINC", "NMDC", "NATIONALUM", "RATNAMANI", "MOIL", "SAIL"
+            ],
+            "REALTY": [
+                "DLF", "GODREJPROP", "PRESTIGE", "OBEROIRLTY", "PHOENIXLTD", "SUNTECK", "BRIGADE",
+                "MAHLIFE", "SOBHA", "IBREALEST", "LODHA"
+            ]
         }
 
     def normalize_timeframe(self, timeframe):
@@ -148,8 +175,12 @@ class FUZCLI:
         
         def fetch_data(symbol):
             try:
-                instruments = self.kite.instruments("NSE")
-                instrument = next((i for i in instruments if i['tradingsymbol'] == symbol), None)
+                cache_key = f"{symbol}:{timeframe}:{from_date}:{to_date}"
+                cached_data = self.cache.get(cache_key)
+                if cached_data is not None:
+                    return symbol, cached_data
+
+                instrument = self.instruments.get(symbol)
                 if instrument is None:
                     print(f"Symbol {symbol} not found in instruments")
                     return symbol, None
@@ -158,7 +189,9 @@ class FUZCLI:
                 if not data:
                     print(f"No data available for {symbol}")
                     return symbol, None
-                return symbol, pd.DataFrame(data).set_index('date')
+                df = pd.DataFrame(data).set_index('date')
+                self.cache.set(cache_key, df)
+                return symbol, df
             except Exception as e:
                 print(f"Error fetching data for {symbol}: {str(e)}")
                 return symbol, None
@@ -649,7 +682,7 @@ class FUZCLI:
 
 def main():
     print(f"{Fore.CYAN}Welcome to FUZ-CLI - Your Zerodha Trading Assistant!{Fore.RESET}")
-    print(f"{Fore.YELLOW}Please input your enctoken.{Fore.RESET}")
+    print(f"{Fore.YELLOW}Please input your enctoken{Fore.RESET}")
     
     enctoken = input("Enter your Zerodha encryption token: ")
     
