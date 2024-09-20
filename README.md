@@ -1,4 +1,3 @@
-![image](https://github.com/user-attachments/assets/5b999631-a339-4cd1-8224-8d11932d9a2c)# FUZ CLI (FUCK YOU ZERODHA) by @IndianStreetBets
 
 This project is result of frustration towards Zerodha API. Even for basic API access they are ripping off customers. So, i whipped up a code in an hour or two to get full access to Zerodha API without requiring API Keys. 
 The FUZ CLI uses 'Encryption token' method to login to your account. 
