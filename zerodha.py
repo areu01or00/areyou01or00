@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from kite_trade import KiteApp
 import json
 import shutil
 import threading
@@ -10,6 +9,7 @@ import time
 from colorama import Fore, Back, Style, init
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from order_management import OrderManager, LiveDataManager, create_kite_app
 
 # Initialize colorama for colored console output
 init(autoreset=True)
@@ -77,8 +77,10 @@ class EnhancedCache:
         }
 
 class FUZCLI:
-    def __init__(self, kite):
-        self.kite = kite
+    def __init__(self, enctoken):
+        self.kite = create_kite_app(enctoken)
+        self.order_manager = OrderManager(self.kite)
+        self.live_data_manager = LiveDataManager(self.kite)
         self.watchlist_items = []
         self.cache = EnhancedCache()
         self.indices = {
@@ -612,6 +614,114 @@ class FUZCLI:
         term_width, _ = shutil.get_terminal_size()
         return f"\n{'-' * term_width}\n{Fore.CYAN}{title}{Fore.RESET}\n{'-' * term_width}"
 
+    def place_order(self, exchange, symbol, transaction_type, quantity, product, order_type, price=None):
+        try:
+            order_id = self.order_manager.place_order(exchange, symbol, transaction_type, quantity, product, order_type, price)
+            if order_id:
+                print(f"{Fore.GREEN}Order placed successfully. Order ID: {order_id}")
+            else:
+                print(f"{Fore.RED}Failed to place order. Please check your inputs and try again.")
+        except Exception as e:
+            self.handle_error(e, "placing order")
+
+    def modify_order(self, order_id, quantity=None, price=None, order_type=None):
+        try:
+            self.order_manager.modify_order(order_id, quantity, price, order_type)
+            print(f"{Fore.GREEN}Order {order_id} modified successfully.")
+        except Exception as e:
+            self.handle_error(e, "modifying order")
+
+    def cancel_order(self, order_id):
+        try:
+            self.order_manager.cancel_order(order_id)
+            print(f"{Fore.GREEN}Order {order_id} cancelled successfully.")
+        except Exception as e:
+            self.handle_error(e, "cancelling order")
+
+    def get_orders(self):
+        try:
+            orders = self.order_manager.get_orders()
+            print(self.create_sub_border("Current Orders"))
+            if orders:
+                for order in orders:
+                    status_color = Fore.GREEN if order['status'] == 'COMPLETE' else Fore.YELLOW
+                    print(f"Order ID: {order['order_id']} | Symbol: {order['tradingsymbol']} | "
+                          f"Type: {order['transaction_type']} | Quantity: {order['quantity']} | "
+                          f"Price: {order['price']} | Status: {status_color}{order['status']}{Fore.RESET}")
+            else:
+                print(f"{Fore.YELLOW}No active orders found.")
+        except Exception as e:
+            self.handle_error(e, "fetching orders")
+
+    def get_positions(self):
+        try:
+            positions = self.order_manager.get_positions()
+            print(self.create_sub_border("Current Positions"))
+            if positions and positions.get('net'):
+                for position in positions['net']:
+                    pnl = position['pnl']
+                    color = Fore.GREEN if pnl >= 0 else Fore.RED
+                    print(f"Symbol: {position['tradingsymbol']} | Quantity: {position['quantity']} | "
+                          f"Average Price: ₹{position['average_price']:.2f} | PNL: {color}₹{pnl:.2f}{Fore.RESET}")
+            else:
+                print(f"{Fore.YELLOW}No open positions found.")
+        except Exception as e:
+            self.handle_error(e, "fetching positions")
+
+    def get_holdings(self):
+        try:
+            holdings = self.order_manager.get_holdings()
+            print(self.create_sub_border("Current Holdings"))
+            if holdings:
+                for holding in holdings:
+                    print(f"Symbol: {holding['tradingsymbol']} | Quantity: {holding['quantity']} | "
+                          f"Average Price: ₹{holding['average_price']:.2f} | "
+                          f"Last Price: ₹{holding['last_price']:.2f}")
+            else:
+                print(f"{Fore.YELLOW}No holdings found.")
+        except Exception as e:
+            self.handle_error(e, "fetching holdings")
+
+    def get_margins(self):
+        try:
+            margins = self.order_manager.get_margins()
+            print(self.create_sub_border("Account Margins"))
+            if margins:
+                for segment, details in margins.items():
+                    print(f"{segment.upper()}:")
+                    print(f"  Available Cash: ₹{details['available']['cash']:.2f}")
+                    print(f"  Used Margin: ₹{details['utilised']['debits']:.2f}")
+            else:
+                print(f"{Fore.YELLOW}No margin information available.")
+        except Exception as e:
+            self.handle_error(e, "fetching margins")
+
+    def subscribe_symbols(self, symbols):
+        try:
+            self.live_data_manager.subscribe_symbols(symbols)
+        except Exception as e:
+            self.handle_error(e, "subscribing to symbols")
+
+    def unsubscribe_symbols(self, symbols):
+        try:
+            self.live_data_manager.unsubscribe_symbols(symbols)
+        except Exception as e:
+            self.handle_error(e, "unsubscribing from symbols")
+
+    def start_live_data(self):
+        try:
+            self.live_data_manager.start_ticker()
+            print(f"{Fore.GREEN}Live data stream started.")
+        except Exception as e:
+            self.handle_error(e, "starting live data stream")
+
+    def stop_live_data(self):
+        try:
+            self.live_data_manager.stop_ticker()
+            print(f"{Fore.YELLOW}Live data stream stopped.")
+        except Exception as e:
+            self.handle_error(e, "stopping live data stream")
+
     def print_usage_guide(self):
         guide = """
         FUZ-CLI Usage Guide
@@ -644,42 +754,56 @@ class FUZCLI:
            Command: screener SECTOR CONDITION1 && CONDITION2 && ... TIMEFRAME
            Example: screener NIFTY50 EMA 7 > EMA 21 && RSI < 30 && VOLUME > SMA 20 15minute
 
-           Available Sectors: NIFTY50, BANK, IT, PHARMA, AUTO, FMCG, METAL, REALTY
+        7. Place Order:
+           Command: place_order EXCHANGE SYMBOL TYPE QUANTITY PRODUCT ORDER_TYPE [PRICE]
+           Example: place_order NSE RELIANCE BUY 1 MIS MARKET
+           Example: place_order NSE INFY SELL 10 CNC LIMIT 1500
 
-           Available Indicators:
-           - EMA (Exponential Moving Average): EMA PERIOD
-           - SMA (Simple Moving Average): SMA PERIOD
-           - RSI (Relative Strength Index): RSI
-           - MACD (Moving Average Convergence Divergence): MACD [macd/signal/histogram]
-           - BB (Bollinger Bands): BB [upper/middle/lower]
-           - ATR (Average True Range): ATR PERIOD
-           - OBV (On-Balance Volume): OBV
-           - CLOSE (Closing Price): CLOSE
-           - VOLUME (Trading Volume): VOLUME
+        8. Modify Order:
+           Command: modify_order ORDER_ID [QUANTITY] [PRICE] [ORDER_TYPE]
+           Example: modify_order ORDER123 QUANTITY 5 PRICE 1550
 
-           Condition Format: 
-           - For comparisons between indicators: INDICATOR1 VALUE1 OPERATOR INDICATOR2 VALUE2
-           - For single indicator conditions: INDICATOR OPERATOR VALUE
+        9. Cancel Order:
+           Command: cancel_order ORDER_ID
+           Example: cancel_order ORDER123
 
-           Operators: >, <, ==, >=, <=
+        10. Get Orders:
+            Command: orders
 
-           Complex Screener Examples:
-           - screener BANK EMA 7 > EMA 21 && RSI < 30 && VOLUME > SMA 20 15minute
-           - screener IT MACD > 0 && CLOSE > BB && ATR > 5 5minute
-           - screener PHARMA RSI < 30 && CLOSE < BB && OBV > SMA 20 day
+        11. Get Positions:
+            Command: positions
 
-        7. Exit:
-           Command: exit
+        12. Get Holdings:
+            Command: holdings
 
-        8. Help:
-           Command: help
+        13. Get Margins:
+            Command: margins
 
-        Note: Replace STOCKNAME, SYMBOL, SECTOR, CONDITIONS with actual values when using the commands.
-        Timeframes can be specified as: 1minute, 3minute, 5minute, 10minute, 15minute, 30minute, 60minute, day
+        14. Subscribe to Live Data:
+            Command: subscribe SYMBOL1 SYMBOL2 ...
+            Example: subscribe RELIANCE TCS INFY
+
+        15. Unsubscribe from Live Data:
+            Command: unsubscribe SYMBOL1 SYMBOL2 ...
+            Example: unsubscribe RELIANCE TCS INFY
+
+        16. Start Live Data Stream:
+            Command: start_live_data
+
+        17. Stop Live Data Stream:
+            Command: stop_live_data
+
+        18. Exit:
+            Command: exit
+
+        19. Help:
+            Command: help
+
+        Note: Replace STOCKNAME, SYMBOL, SECTOR, CONDITIONS, EXCHANGE, TYPE, QUANTITY, PRODUCT, ORDER_TYPE, PRICE, and ORDER_ID with actual values when using the commands.
         """
         print(self.create_sub_border("FUZ-CLI Help"))
         print(guide)
-
+    
 def main():
     print(f"{Fore.CYAN}Welcome to FUZ-CLI - Your Zerodha Trading Assistant!{Fore.RESET}")
     print(f"{Fore.YELLOW}Please input your enctoken{Fore.RESET}")
@@ -687,8 +811,7 @@ def main():
     enctoken = input("Enter your Zerodha encryption token: ")
     
     try:
-        kite = KiteApp(enctoken=enctoken)
-        cli = FUZCLI(kite)
+        cli = FUZCLI(enctoken)
         print(cli.create_sub_border("Successfully connected to FUZ-CLI!"))
         print(f"{Fore.GREEN}Type 'help' for a list of available commands.{Fore.RESET}")
 
@@ -733,15 +856,60 @@ def main():
                         sector = user_input[1]
                         criteria = ' '.join(user_input[2:])
                         cli.screener(sector, criteria)
+                elif command == "place_order":
+                    if len(user_input) < 7:
+                        print("Usage: place_order EXCHANGE SYMBOL TYPE QUANTITY PRODUCT ORDER_TYPE [PRICE]")
+                    else:
+                        exchange, symbol, transaction_type, quantity, product, order_type = user_input[1:7]
+                        price = user_input[7] if len(user_input) > 7 else None
+                        cli.place_order(exchange, symbol, transaction_type, int(quantity), product, order_type, price)
+                elif command == "modify_order":
+                    if len(user_input) < 3:
+                        print("Usage: modify_order ORDER_ID [QUANTITY] [PRICE] [ORDER_TYPE]")
+                    else:
+                        order_id = user_input[1]
+                        kwargs = {}
+                        for arg in user_input[2:]:
+                            key, value = arg.split()
+                            kwargs[key.lower()] = int(value) if key.lower() == 'quantity' else value
+                        cli.modify_order(order_id, **kwargs)
+                elif command == "cancel_order":
+                    if len(user_input) != 2:
+                        print("Usage: cancel_order ORDER_ID")
+                    else:
+                        cli.cancel_order(user_input[1])
+                elif command == "orders":
+                    cli.get_orders()
+                elif command == "positions":
+                    cli.get_positions()
+                elif command == "holdings":
+                    cli.get_holdings()
+                elif command == "margins":
+                    cli.get_margins()
+                elif command == "subscribe":
+                    if len(user_input) < 2:
+                        print("Usage: subscribe SYMBOL1 SYMBOL2 ...")
+                    else:
+                        cli.subscribe_symbols(user_input[1:])
+                elif command == "unsubscribe":
+                    if len(user_input) < 2:
+                        print("Usage: unsubscribe SYMBOL1 SYMBOL2 ...")
+                    else:
+                        cli.unsubscribe_symbols(user_input[1:])
+                elif command == "start_live_data":
+                    cli.start_live_data()
+                elif command == "stop_live_data":
+                    cli.stop_live_data()
                 elif command == "exit":
                     print(cli.create_sub_border("Thank you for using FUZ-CLI. Goodbye!"))
                     break
                 elif command == "help":
                     cli.print_usage_guide()
                 else:
-                    print("Invalid command. Type 'help' for a list of commands.")
+                    print(f"{Fore.RED}Invalid command. Type 'help' for a list of commands.{Fore.RESET}")
             except Exception as e:
-                cli.handle_error(e, "processing command")
+                print(f"{Fore.RED}Error executing command: {str(e)}{Fore.RESET}")
+                print(f"{Fore.YELLOW}Type 'help' for usage information or 'exit' to quit.{Fore.RESET}")
 
     except Exception as e:
         print(f"{Fore.RED}Error initializing FUZ-CLI: {str(e)}{Fore.RESET}")
