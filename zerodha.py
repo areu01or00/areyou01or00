@@ -93,7 +93,7 @@ class FUZCLI:
             "NIFTY METAL": "NIFTY METAL",
             "NIFTY REALTY": "NIFTY REALTY",
             "NIFTY MIDCAP 100": "NIFTY MIDCAP 100",
-            "NIFTY SMLCAP 100": "NIFTY SMALLCAP 100"
+            "NIFTY SMLCAP 100": "NIFTY SMLCAP 100"
         }
         self.alerts = []
         self.alert_thread = threading.Thread(target=self.check_alerts, daemon=True)
@@ -116,7 +116,7 @@ class FUZCLI:
     def get_sector_stocks(self):
         return {
             "NIFTY50": [
-                "RELIANCE", "TCS", "HDFC", "INFY", "ICICIBANK", "HDFCBANK", "ITC", "KOTAKBANK",
+                "RELIANCE", "TCS", "INFY", "ICICIBANK", "HDFCBANK", "ITC", "KOTAKBANK",
                 "HINDUNILVR", "LT", "SBIN", "BHARTIARTL", "BAJFINANCE", "ASIANPAINT", "MARUTI",
                 "HCLTECH", "AXISBANK", "WIPRO", "NESTLEIND", "ULTRACEMCO", "SUNPHARMA", "TITAN",
                 "TECHM", "BAJAJFINSV", "ONGC", "HDFCLIFE", "NTPC", "POWERGRID", "M&M", "DIVISLAB",
