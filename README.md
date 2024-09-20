@@ -1,5 +1,5 @@
 
-#FUZ-CLI by @IndianStreetBets
+#  FUZ-CLI by @IndianStreetBets
 
 
 ![image](https://github.com/user-attachments/assets/665ada07-4267-4550-89b8-643292dcb362)
@@ -14,7 +14,7 @@
 
 # FUZ CLI - WHAT, WHY, WHO.
 
-- What : A command-line interface for interacting with the Zerodha trading platform.
+- What : A command-line interface for interacting with the Zerodha trading platform without API keys.
 - Why : Why the fuck not.
 - Who : Mainly for developers to develop tools on top of it but it can be used by regular end users as well. Functionality has been added .... or atleast i have tried. 
 
