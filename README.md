@@ -1,7 +1,5 @@
 
-This project is result of frustration towards Zerodha API. Even for basic API access they are ripping off customers. So, i whipped up a code in an hour or two to get full access to Zerodha API without requiring API Keys. 
-The FUZ CLI uses 'Encryption token' method to login to your account. 
-
+#FUZ-CLI by @IndianStreetBets
 
 
 ![image](https://github.com/user-attachments/assets/665ada07-4267-4550-89b8-643292dcb362)
